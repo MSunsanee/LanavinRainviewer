@@ -196,4 +196,49 @@ async function loadRadar(){
   $('radarNotice').textContent='Radar image unavailable: '+e.message;
  }
 }
+</script>
+<script>
+(function(){
+ const marker='#connect=';
+ const decodeConfig=value=>{
+  let s=value.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4)s+='=';
+  return JSON.parse(atob(s));
+ };
+ const encodeConfig=value=>btoa(JSON.stringify(value)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const hadCredentials=!!(app.url&&app.key);
+ if(location.hash.startsWith(marker)){
+  try{
+   const config=decodeConfig(location.hash.slice(marker.length));
+   if(!validUrl(config.u)||typeof config.k!=='string'||config.k.length<32)throw new Error('invalid');
+   const changed=config.u!==app.url||config.k!==app.key;
+   app.url=config.u;app.key=config.k;
+   storage.set('rg.url',config.u);storage.set('rg.key',config.k);session.set('rg.key',config.k);
+   $('gasUrl').value=config.u;$('appKey').value=config.k;$('rememberKey').checked=true;
+   history.replaceState(null,'',location.pathname+location.search);
+   if(changed||!hadCredentials)connect();
+  }catch(e){
+   history.replaceState(null,'',location.pathname+location.search);
+   toast('Private connection link is invalid');
+  }
+ }
+ const actions=$('connectForm').querySelector('.form-actions');
+ const share=document.createElement('button');
+ share.type='button';share.className='btn';share.id='shareConnection';
+ share.textContent='\u0e25\u0e34\u0e07\u0e01\u0e4c\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e31\u0e27';
+ share.title='Private link for connecting another device';
+ actions.appendChild(share);
+ const note=document.createElement('p');
+ note.className='warning';note.style.marginTop='14px';
+ note.textContent='\u0e40\u0e01\u0e47\u0e1a\u0e25\u0e34\u0e07\u0e01\u0e4c\u0e19\u0e35\u0e49\u0e40\u0e1b\u0e47\u0e19\u0e04\u0e27\u0e32\u0e21\u0e25\u0e31\u0e1a';
+ $('connectForm').insertAdjacentElement('afterend',note);
+ share.onclick=async()=>{
+  if(!app.connected||!validUrl(app.url)||!app.key){toast('Connect successfully before creating a private link');return;}
+  const link=location.origin+location.pathname+location.search+marker+encodeConfig({u:app.url,k:app.key});
+  try{
+   if(navigator.share)await navigator.share({title:document.title,url:link});
+   else{await navigator.clipboard.writeText(link);toast('Private connection link copied');}
+  }catch(e){if(e.name!=='AbortError')prompt('Copy this private connection link',link);}
+ };
+})();
 </script></body></html>
