@@ -33,7 +33,7 @@
 </defs></svg>
 <aside class="rail"><div class="brand"><div class="brandmark"><svg class="icon"><use href="#i-leaf"/></svg></div><div><b>เลขาสวนยาง</b><small>GARDEN WEATHER</small></div></div>
 <nav class="nav" aria-label="เมนูหลัก"><button class="active" data-view="dashboard"><svg class="icon"><use href="#i-grid"/></svg>ภาพรวมสวน</button><button data-view="radar"><svg class="icon"><use href="#i-rain"/></svg>เรดาร์ฝน</button><button data-view="alerts"><svg class="icon"><use href="#i-bell"/></svg>การแจ้งเตือน</button><button data-view="journal"><svg class="icon"><use href="#i-book"/></svg>บันทึกงาน</button><button data-view="settings"><svg class="icon"><use href="#i-settings"/></svg>ตั้งค่าระบบ</button></nav>
-<div class="rail-foot"><svg class="icon"><use href="#i-leaf"/></svg><h3>พร้อมก่อนลงสวน</h3><p>ดูแนวโน้มฝน แล้วเผื่อเวลาเก็บงานและเดินทางกลับ</p><button id="railVoice">แตะแล้วพูด</button></div></aside>
+<div class="rail-foot"><svg class="icon"><use href="#i-leaf"/></svg><h3>พร้อมก่อนลงสวน</h3><p>ดูแนวโน้มฝน แล้วเผื่อเวลาเก็บงานและเดินทางกลับ</p><button id="railVoice">ตรวจความพร้อม</button></div></aside>
 <main class="workspace"><div class="mobile-brand">เลขาสวนยาง</div><header class="topbar"><div><div class="eyebrow">YOUR GARDEN, AT A GLANCE</div><h1 id="pageTitle">ภาพรวมสวน</h1><div class="date" id="today"></div></div><div class="top-actions"><span class="status-pill" id="connectionStatus" data-state="error">ยังไม่เชื่อมต่อ</span><button class="btn" id="refreshButton" aria-label="อัปเดตข้อมูล"><svg class="icon"><use href="#i-refresh"/></svg><span>อัปเดต</span></button></div></header>
 <div id="offlineBanner" class="warning notice-strip hidden" role="status">ออฟไลน์ — ข้อมูลอาจเก่า บันทึกใหม่จะรอส่งเมื่อคุณกลับมาเชื่อมต่อ</div>
 <section class="view active" id="view-dashboard">
@@ -240,5 +240,94 @@ async function loadRadar(){
    else{await navigator.clipboard.writeText(link);toast('Private connection link copied');}
   }catch(e){if(e.name!=='AbortError')prompt('Copy this private connection link',link);}
  };
+})();
+</script>
+<style>
+.readiness-panel{margin:0 0 22px;padding:22px 24px;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:var(--shadow)}
+.readiness-panel[data-level="go"]{border-left:7px solid #2b7a52;background:#f3faf5}
+.readiness-panel[data-level="wait"]{border-left:7px solid #d4982d;background:#fffaf0}
+.readiness-panel[data-level="stop"]{border-left:7px solid #b84e3a;background:#fff5f2}
+.readiness-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.readiness-result{font-size:clamp(22px,2.4vw,30px);line-height:1.35;margin:8px 0 4px}
+.readiness-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
+.readiness-stat{padding:13px 14px;border:1px solid var(--line);border-radius:13px;background:#ffffffb8}
+.readiness-stat small{display:block;color:var(--muted);font-size:12px}.readiness-stat b{font-size:18px}
+.readiness-reasons{margin:10px 0 0;padding-left:24px}.readiness-reasons li{margin:6px 0}
+.readiness-note{margin-top:15px;color:var(--muted);font-size:13px}
+@media(max-width:760px){.readiness-grid{grid-template-columns:1fr 1fr}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}}
+</style>
+<script>
+(function(){
+ const compassNames=['ทิศเหนือ','ทิศตะวันออกเฉียงเหนือ','ทิศตะวันออก','ทิศตะวันออกเฉียงใต้','ทิศใต้','ทิศตะวันตกเฉียงใต้','ทิศตะวันตก','ทิศตะวันตกเฉียงเหนือ'];
+ const sampleNames=['กลางสวน'].concat(compassNames);
+ const panel=document.createElement('article');
+ panel.id='readinessPanel';panel.className='readiness-panel hidden';panel.dataset.level='wait';
+ panel.innerHTML='<div class="readiness-head"><div><span class="badge" id="readinessBadge">กำลังรอตรวจ</span><h2 class="readiness-result" id="readinessTitle">วิเคราะห์ก่อนลงกรีดยาง</h2><p class="muted" id="readinessSummary">ตรวจพยากรณ์กลางสวนและ 8 ทิศรอบสวนในรัศมี 10 กม.</p></div><button class="btn small" id="readinessRefresh">ตรวจใหม่</button></div><div class="readiness-grid"><div class="readiness-stat"><small>โอกาสฝนสูงสุด 2 ชม.</small><b id="readyProbability">—</b></div><div class="readiness-stat"><small>ฝนสะสมสูงสุด</small><b id="readyRain">—</b></div><div class="readiness-stat"><small>บริเวณเสี่ยงสูงสุด</small><b id="readyDirection">—</b></div><div class="readiness-stat"><small>ลม / กระโชกสูงสุด</small><b id="readyWind">—</b></div></div><ul class="readiness-reasons" id="readinessReasons"></ul><p class="readiness-note" id="readinessNote"></p>';
+ const dashboard=document.getElementById('view-dashboard');
+ dashboard.querySelector('.intro-line').insertAdjacentElement('afterend',panel);
+ const num=x=>{const n=Number(x);return Number.isFinite(n)?n:null;};
+ const pct=x=>(num(x)===null?'—':Math.round(num(x))+'%');
+ const mm=x=>(num(x)===null?'—':num(x).toLocaleString('th-TH',{maximumFractionDigits:1})+' มม.');
+ const kmh=x=>(num(x)===null?'—':Math.round(num(x))+' กม./ชม.');
+ function compass(deg){const n=num(deg);return n===null?'ไม่ทราบทิศ':compassNames[Math.round((((n%360)+360)%360)/45)%8];}
+ function bearing(lat1,lon1,lat2,lon2){const a=lat1*Math.PI/180,b=lat2*Math.PI/180,d=(lon2-lon1)*Math.PI/180;return (Math.atan2(Math.sin(d)*Math.cos(b),Math.cos(a)*Math.sin(b)-Math.sin(a)*Math.cos(b)*Math.cos(d))*180/Math.PI+360)%360;}
+ function makePoints(lat,lon){
+  const latStep=10/111.32,lonStep=10/(111.32*Math.max(.2,Math.cos(lat*Math.PI/180)));
+  const v=[[0,0],[1,0],[Math.SQRT1_2,Math.SQRT1_2],[0,1],[-Math.SQRT1_2,Math.SQRT1_2],[-1,0],[-Math.SQRT1_2,-Math.SQRT1_2],[0,-1],[Math.SQRT1_2,-Math.SQRT1_2]];
+  return v.map((x,i)=>({name:sampleNames[i],lat:lat+x[0]*latStep,lon:lon+x[1]*lonStep}));
+ }
+ function overlaps(hourly){
+  const start=Date.now()/1000,end=start+7200,times=Array.isArray(hourly&&hourly.time)?hourly.time:[];
+  return times.map((t,i)=>({i,t:num(t)})).filter(x=>x.t!==null).map(x=>({i:x.i,weight:Math.max(0,Math.min(x.t,end)-Math.max(x.t-3600,start))/3600})).filter(x=>x.weight>0);
+ }
+ function summarize(data,point){
+  const h=data&&data.hourly||{},windows=overlaps(h),values=(key)=>windows.map(x=>num(h[key]&&h[key][x.i])).filter(x=>x!==null);
+  const probabilities=values('precipitation_probability'),gusts=values('wind_gusts_10m'),winds=values('wind_speed_10m'),dirs=values('wind_direction_10m');
+  return {name:point.name,probability:probabilities.length?Math.max.apply(null,probabilities):null,rain:windows.reduce((sum,x)=>sum+(num(h.precipitation&&h.precipitation[x.i])||0)*x.weight,0),gust:gusts.length?Math.max.apply(null,gusts):null,wind:winds.length?Math.max.apply(null,winds):null,windDirection:dirs.length?dirs[0]:null};
+ }
+ async function fetchArea(points){
+  const q=new URLSearchParams({latitude:points.map(p=>p.lat.toFixed(5)).join(','),longitude:points.map(p=>p.lon.toFixed(5)).join(','),hourly:'precipitation_probability,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m',forecast_hours:'4',timezone:'Asia/Bangkok',timeformat:'unixtime'});
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+  try{const response=await fetch('https://api.open-meteo.com/v1/forecast?'+q.toString(),{signal:controller.signal});if(!response.ok)throw new Error('Open-Meteo HTTP '+response.status);const result=await response.json();if(!Array.isArray(result)||result.length!==points.length)throw new Error('ข้อมูลพยากรณ์รอบสวนไม่ครบ');return result;}finally{clearTimeout(timer);}
+ }
+ function analyse(samples,areaComplete){
+  const settings=app.settings||{},probabilityThreshold=num(settings.rainProbability)||60,rainThreshold=num(settings.rainAmount)||.2,gustThreshold=num(settings.gustThreshold)||40;
+  const available=samples.filter(x=>x.probability!==null),maxProbability=available.length?Math.max.apply(null,available.map(x=>x.probability)):null,maxRain=samples.length?Math.max.apply(null,samples.map(x=>x.rain||0)):null,maxGust=samples.length?Math.max.apply(null,samples.map(x=>x.gust||0)):null,center=samples[0]||{};
+  const score=x=>(x.probability||0)+Math.min(35,(x.rain||0)*25)+(x.gust>=gustThreshold?15:0),outer=samples.slice(1),highest=outer.length?outer.reduce((a,b)=>score(b)>score(a)?b:a):center,outerScores=outer.map(score),spread=outerScores.length?Math.max.apply(null,outerScores)-Math.min.apply(null,outerScores):0;
+  const direction=!areaComplete?'ตรวจได้เฉพาะกลางสวน':spread<5?'ใกล้เคียงกันรอบสวน':highest.name,current=app.weather&&app.weather.forecast&&app.weather.forecast.current||{},currentRain=num(current.precipitation)||0,radar=app.weather&&app.weather.radar||{},lat=num(settings.latitude),lon=num(settings.longitude);
+  const radar10=radar.status==='ok'&&Array.isArray(radar.cells)?radar.cells.filter(c=>(num(c.distanceKm)===null?Infinity:num(c.distanceKm))<=10):[],radarThreat=radar10.find(c=>c.near||c.inLeadWindow||(num(c.closingSpeedKmh)||0)>1),forecastThreat=maxProbability!==null&&maxProbability>=probabilityThreshold&&(maxRain||0)>=rainThreshold,gustThreat=maxGust!==null&&maxGust>=gustThreshold;
+  let level='go',title='กรีดได้โดยเฝ้าระวัง',badge='ความเสี่ยงต่ำตามข้อมูลล่าสุด';
+  if(currentRain>=.1||radarThreat||forecastThreat||gustThreat){level='stop';title='ไม่ควรกรีดตอนนี้';badge='พบความเสี่ยงใน 2 ชั่วโมง';}
+  else if(!areaComplete||maxProbability===null||maxProbability>=Math.max(40,probabilityThreshold-20)||(maxRain||0)>=Math.max(.1,rainThreshold/2)||radar10.length){level='wait';title='ควรรอและตรวจซ้ำก่อนกรีด';badge='ยังมีความเสี่ยงหรือข้อมูลไม่ครบ';}
+  const reasons=[];
+  if(currentRain>=.1)reasons.push('ขณะนี้แบบจำลองรายงานฝนที่สวน '+mm(currentRain));
+  reasons.push('โอกาสฝนสูงสุดในช่วง 2 ชั่วโมง '+pct(maxProbability)+' และฝนสะสมสูงสุดประมาณ '+mm(maxRain));
+  reasons.push(areaComplete?(spread<5?'ค่าพยากรณ์ทั้ง 8 ทิศใกล้เคียงกัน':'บริเวณที่มีความเสี่ยงสูงสุดคือ '+direction):'โหลดข้อมูลรอบรัศมี 10 กม. ไม่สำเร็จ จึงใช้ข้อมูลกลางสวนเท่านั้น');
+  if(center.wind!==null)reasons.push('ลมบริเวณสวนสูงสุดประมาณ '+kmh(center.wind)+' พัดมาจาก'+compass(center.windDirection)+' และลมกระโชกสูงสุดรอบสวน '+kmh(maxGust));
+  if(radar.status==='ok'){
+   if(radar10.length){const cell=radar10[0],where=lat!==null&&lon!==null&&num(cell.lat)!==null&&num(cell.lon)!==null?compass(bearing(lat,lon,num(cell.lat),num(cell.lon))):'ไม่ทราบทิศ';reasons.push('พบกลุ่มฝนเชิงตัวเลขภายใน 10 กม. ทาง'+where+' · '+radarSummary(cell));}
+   else reasons.push('ฟีดเรดาร์เชิงตัวเลขยังไม่พบกลุ่มฝนภายใน 10 กม.');
+  }else reasons.push('ยังไม่มีฟีดเรดาร์เชิงตัวเลขยืนยันฝนในรัศมี 10 กม. โปรดดูภาพเรดาร์ประกอบ');
+  const summary=level==='go'?'ข้อมูลล่าสุดยังไม่เข้าเกณฑ์ฝนและลมที่ตั้งไว้ แต่ควรตรวจหน้ายางและท้องฟ้าจริงก่อนเริ่มงาน':level==='wait'?'รอ 15–30 นาที แล้วตรวจใหม่ พร้อมดูภาพเรดาร์และท้องฟ้าจริง':'มีความเสี่ยงฝนหรือลมเข้าเกณฑ์ ควรเลื่อนการกรีดและตรวจใหม่ภายหลัง';
+  return {level,title,badge,summary,maxProbability,maxRain,maxGust,center,direction,reasons};
+ }
+ function paint(report){
+  panel.classList.remove('hidden');panel.dataset.level=report.level;document.getElementById('readinessBadge').textContent=report.badge;document.getElementById('readinessTitle').textContent=report.title;document.getElementById('readinessSummary').textContent=report.summary;document.getElementById('readyProbability').textContent=pct(report.maxProbability);document.getElementById('readyRain').textContent=mm(report.maxRain);document.getElementById('readyDirection').textContent=report.direction;document.getElementById('readyWind').textContent=kmh(report.center.wind)+' / '+kmh(report.maxGust);document.getElementById('readinessReasons').innerHTML=report.reasons.map(x=>'<li>'+esc(x)+'</li>').join('');document.getElementById('readinessNote').textContent='ประเมินจาก Open-Meteo หลายจุดรอบสวนและฟีดเรดาร์เชิงตัวเลข (ถ้ามี) ไม่ใช่การรับรองว่าจะไม่มีฝน และต้องตรวจความแห้งของหน้ายางจริงก่อนกรีด';
+ }
+ async function runReadiness(){
+  if(!app.connected){toast('เชื่อมต่อ Google Sheets ก่อนตรวจความพร้อม');setView('settings');return;}if(!confirmed()){toast('ยืนยันพิกัดสวนก่อนตรวจความพร้อม');setView('settings');return;}
+  setView('dashboard');panel.classList.remove('hidden');panel.dataset.level='wait';document.getElementById('readinessBadge').textContent='กำลังตรวจข้อมูลล่าสุด…';document.getElementById('readinessTitle').textContent='กำลังวิเคราะห์รอบสวน 10 กม.';document.getElementById('readinessSummary').textContent='กำลังเปรียบเทียบกลางสวนและ 8 ทิศในช่วง 2 ชั่วโมงข้างหน้า';
+  const buttons=[document.getElementById('railVoice'),document.getElementById('readinessRefresh')].filter(Boolean);buttons.forEach(b=>b.disabled=true);
+  try{
+   const weather=await api('weather');app.weather=weather;app.health=weather.health;renderWeather();renderHealth();
+   const lat=num(app.settings.latitude),lon=num(app.settings.longitude),points=makePoints(lat,lon);let summaries,areaComplete=true;
+   try{const area=await fetchArea(points);summaries=area.map((x,i)=>summarize(x,points[i]));}catch(e){areaComplete=false;summaries=weather.forecast?[summarize(weather.forecast,points[0])]:[];}
+   if(!summaries.length)throw new Error('ไม่มีข้อมูลพยากรณ์สำหรับวิเคราะห์');const report=analyse(summaries,areaComplete);paint(report);panel.scrollIntoView({behavior:'smooth',block:'start'});speak(report.title+' '+report.summary+' โอกาสฝนสูงสุด '+pct(report.maxProbability));if(report.level==='stop'&&'vibrate' in navigator)navigator.vibrate([250,120,250]);
+  }catch(e){panel.dataset.level='wait';document.getElementById('readinessBadge').textContent='ตรวจไม่สำเร็จ';document.getElementById('readinessTitle').textContent='ยังสรุปว่าควรกรีดไม่ได้';document.getElementById('readinessSummary').textContent=e.message;toast('ตรวจความพร้อมไม่สำเร็จ · '+e.message);speak('ยังตรวจความพร้อมไม่ได้ค่ะ กรุณาตรวจอินเทอร์เน็ตและลองใหม่');}finally{buttons.forEach(b=>b.disabled=false);}
+ }
+ window.runGardenReadiness=runReadiness;
+  const rail=document.getElementById('railVoice');rail.textContent='ตรวจความพร้อม';rail.title='วิเคราะห์ว่าควรกรีดยางหรือไม่ใน 2 ชั่วโมงข้างหน้า';rail.onclick=runReadiness;document.querySelector('.rail-foot p').textContent='ตรวจฝน 8 ทิศรอบสวน 10 กม. และแนวโน้ม 2 ชั่วโมงก่อนกรีด';
+  const voiceHint=document.querySelector('.voice-card p');if(voiceHint)voiceHint.textContent='พูดว่า “พร้อมก่อนลงสวน” หรือ “ควรกรีดไหม”';document.getElementById('readinessRefresh').onclick=runReadiness;
+  const priorVoiceCommand=voiceCommand;voiceCommand=function(text){const t=String(text||'');if((t.includes('พร้อม')&&t.includes('ลงสวน'))||t.includes('ควรกรีด')||t.includes('กรีดได้ไหม')||t.includes('ตรวจความพร้อม')){runReadiness();return;}priorVoiceCommand(t);};
 })();
 </script></body></html>
