@@ -249,7 +249,7 @@ async function loadRadar(){
 .readiness-panel[data-level="stop"]{border-left:7px solid #b84e3a;background:#fff5f2}
 .readiness-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
 .readiness-result{font-size:clamp(22px,2.4vw,30px);line-height:1.35;margin:8px 0 4px}
-.readiness-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
+.readiness-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}
 .readiness-stat{padding:13px 14px;border:1px solid var(--line);border-radius:13px;background:#ffffffb8}
 .readiness-stat small{display:block;color:var(--muted);font-size:12px}.readiness-stat b{font-size:18px}
 .readiness-reasons{margin:10px 0 0;padding-left:24px}.readiness-reasons li{margin:6px 0}
@@ -257,7 +257,7 @@ async function loadRadar(){
 .voice-actions{display:flex;align-items:center;gap:10px;flex:none}.weather-check-button{background:var(--forest);border-color:var(--forest);color:#fff;white-space:nowrap}
 html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*,.card,.hero,.prep,.metric,.side-stack,.forms,.main-grid,.hero-grid{min-width:0;max-width:100%}.card-head>div,.topbar>div:first-child,.hero-top>*,.hero-bottom>*{min-width:0}.hero h2,.hero p,.card h2,.muted,.warning,.health-list b{overflow-wrap:anywhere}
 @media(max-width:760px){
- .readiness-grid{grid-template-columns:1fr 1fr}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}.voice-card{align-items:stretch;flex-direction:column}.voice-actions{width:100%}.weather-check-button{flex:1;min-width:0;white-space:normal}.voice-actions .mic-round{width:58px}
+ .readiness-grid{grid-template-columns:1fr 1fr}.readiness-grid .readiness-stat:last-child{grid-column:1/-1}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}.voice-card{align-items:stretch;flex-direction:column}.voice-actions{width:100%}.weather-check-button{flex:1;min-width:0;white-space:normal}.voice-actions .mic-round{width:58px}
  .rail{width:100%;max-width:100vw;height:calc(70px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));overflow:hidden}
  .nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;width:100%;height:100%}
  .nav button{width:100%;min-width:0;padding:6px 1px;font-size:10px;line-height:1.15;gap:2px;text-align:center;justify-content:center;overflow-wrap:anywhere}
@@ -274,7 +274,7 @@ html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*
  const sampleNames=['กลางสวน'].concat(compassNames);
  const panel=document.createElement('article');
  panel.id='readinessPanel';panel.className='readiness-panel hidden';panel.dataset.level='wait';
- panel.innerHTML='<div class="readiness-head"><div><span class="badge" id="readinessBadge">กำลังรอตรวจ</span><h2 class="readiness-result" id="readinessTitle">วิเคราะห์ก่อนลงกรีดยาง</h2><p class="muted" id="readinessSummary">ตรวจพยากรณ์กลางสวนและ 8 ทิศรอบสวนในรัศมี 10 กม.</p></div><button class="btn small" id="readinessRefresh">ตรวจใหม่</button></div><div class="readiness-grid"><div class="readiness-stat"><small>โอกาสฝนสูงสุด 2 ชม.</small><b id="readyProbability">—</b></div><div class="readiness-stat"><small>ฝนสะสมสูงสุด</small><b id="readyRain">—</b></div><div class="readiness-stat"><small>บริเวณเสี่ยงสูงสุด</small><b id="readyDirection">—</b></div><div class="readiness-stat"><small>ลม / กระโชกสูงสุด</small><b id="readyWind">—</b></div></div><ul class="readiness-reasons" id="readinessReasons"></ul><p class="readiness-note" id="readinessNote"></p>';
+ panel.innerHTML='<div class="readiness-head"><div><span class="badge" id="readinessBadge">กำลังรอตรวจ</span><h2 class="readiness-result" id="readinessTitle">วิเคราะห์ก่อนลงกรีดยาง</h2><p class="muted" id="readinessSummary">ตรวจพยากรณ์กลางสวนและ 8 ทิศรอบสวนในรัศมี 10 กม.</p></div><button class="btn small" id="readinessRefresh">ตรวจใหม่</button></div><div class="readiness-grid"><div class="readiness-stat"><small>โอกาสฝนถึงสวน 2 ชม.</small><b id="readyArrivalProbability">—</b></div><div class="readiness-stat"><small>ลักษณะฝนรอบสวน</small><b id="readyRainType">—</b></div><div class="readiness-stat"><small>ฝนสะสมสูงสุด</small><b id="readyRain">—</b></div><div class="readiness-stat"><small>บริเวณเสี่ยงสูงสุด</small><b id="readyDirection">—</b></div><div class="readiness-stat"><small>ลม / กระโชกสูงสุด</small><b id="readyWind">—</b></div></div><ul class="readiness-reasons" id="readinessReasons"></ul><p class="readiness-note" id="readinessNote"></p>';
  const dashboard=document.getElementById('view-dashboard');
  dashboard.querySelector('.intro-line').insertAdjacentElement('afterend',panel);
  const num=x=>{const n=Number(x);return Number.isFinite(n)?n:null;};
@@ -294,8 +294,8 @@ html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*
  }
  function summarize(data,point){
   const h=data&&data.hourly||{},windows=overlaps(h),values=(key)=>windows.map(x=>num(h[key]&&h[key][x.i])).filter(x=>x!==null);
-  const probabilities=values('precipitation_probability'),gusts=values('wind_gusts_10m'),winds=values('wind_speed_10m'),dirs=values('wind_direction_10m');
-  return {name:point.name,probability:probabilities.length?Math.max.apply(null,probabilities):null,rain:windows.reduce((sum,x)=>sum+(num(h.precipitation&&h.precipitation[x.i])||0)*x.weight,0),gust:gusts.length?Math.max.apply(null,gusts):null,wind:winds.length?Math.max.apply(null,winds):null,windDirection:dirs.length?dirs[0]:null};
+  const probabilities=values('precipitation_probability'),rainRates=values('precipitation'),gusts=values('wind_gusts_10m'),winds=values('wind_speed_10m'),dirs=values('wind_direction_10m');
+  return {name:point.name,probability:probabilities.length?Math.max.apply(null,probabilities):null,rain:windows.reduce((sum,x)=>sum+(num(h.precipitation&&h.precipitation[x.i])||0)*x.weight,0),peakRainRate:rainRates.length?Math.max.apply(null,rainRates):0,gust:gusts.length?Math.max.apply(null,gusts):null,wind:winds.length?Math.max.apply(null,winds):null,windDirection:dirs.length?dirs[0]:null};
  }
  async function fetchArea(points){
   const q=new URLSearchParams({latitude:points.map(p=>p.lat.toFixed(5)).join(','),longitude:points.map(p=>p.lon.toFixed(5)).join(','),hourly:'precipitation_probability,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m',forecast_hours:'4',timezone:'Asia/Bangkok',timeformat:'unixtime'});
@@ -304,7 +304,9 @@ html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*
  }
  function analyse(samples,areaComplete){
   const settings=app.settings||{},probabilityThreshold=num(settings.rainProbability)||60,rainThreshold=num(settings.rainAmount)||.2,gustThreshold=num(settings.gustThreshold)||40;
-  const available=samples.filter(x=>x.probability!==null),maxProbability=available.length?Math.max.apply(null,available.map(x=>x.probability)):null,maxRain=samples.length?Math.max.apply(null,samples.map(x=>x.rain||0)):null,maxGust=samples.length?Math.max.apply(null,samples.map(x=>x.gust||0)):null,center=samples[0]||{};
+  const available=samples.filter(x=>x.probability!==null),maxProbability=available.length?Math.max.apply(null,available.map(x=>x.probability)):null,maxRain=samples.length?Math.max.apply(null,samples.map(x=>x.rain||0)):null,maxRainRate=samples.length?Math.max.apply(null,samples.map(x=>x.peakRainRate||0)):0,maxGust=samples.length?Math.max.apply(null,samples.map(x=>x.gust||0)):null,center=samples[0]||{},arrivalProbability=center.probability===undefined?null:center.probability;
+  const wet=samples.filter(x=>(x.probability||0)>=40&&(x.rain||0)>=.1),coverage=samples.length?wet.length/samples.length*100:0,distribution=coverage>=20&&coverage<=60?'ตกกระจาย':coverage>60?'ตกหลายทิศ':'ตกเฉพาะจุด';
+  const intensity=maxRainRate<.1?'ยังไม่พบฝน':maxRainRate<.5?'ตกปรอยๆ':maxRainRate<2.5?'ตกเบา':maxRainRate<10?'ตกปานกลาง':maxRainRate<50?'ตกหนัก':'ตกหนักมาก',rainType=intensity==='ยังไม่พบฝน'?intensity:distribution+' · '+intensity;
   const score=x=>(x.probability||0)+Math.min(35,(x.rain||0)*25)+(x.gust>=gustThreshold?15:0),outer=samples.slice(1),highest=outer.length?outer.reduce((a,b)=>score(b)>score(a)?b:a):center,outerScores=outer.map(score),spread=outerScores.length?Math.max.apply(null,outerScores)-Math.min.apply(null,outerScores):0;
   const direction=!areaComplete?'ตรวจได้เฉพาะกลางสวน':spread<5?'ใกล้เคียงกันรอบสวน':highest.name,current=app.weather&&app.weather.forecast&&app.weather.forecast.current||{},currentRain=num(current.precipitation)||0,radar=app.weather&&app.weather.radar||{},lat=num(settings.latitude),lon=num(settings.longitude);
   const radar10=radar.status==='ok'&&Array.isArray(radar.cells)?radar.cells.filter(c=>(num(c.distanceKm)===null?Infinity:num(c.distanceKm))<=10):[],radarThreat=radar10.find(c=>c.near||c.inLeadWindow||(num(c.closingSpeedKmh)||0)>1),forecastThreat=maxProbability!==null&&maxProbability>=probabilityThreshold&&(maxRain||0)>=rainThreshold,gustThreat=maxGust!==null&&maxGust>=gustThreshold;
@@ -313,7 +315,8 @@ html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*
   else if(!areaComplete||maxProbability===null||maxProbability>=Math.max(40,probabilityThreshold-20)||(maxRain||0)>=Math.max(.1,rainThreshold/2)||radar10.length){level='wait';title='ควรรอและตรวจซ้ำก่อนกรีด';badge='ยังมีความเสี่ยงหรือข้อมูลไม่ครบ';}
   const reasons=[];
   if(currentRain>=.1)reasons.push('ขณะนี้แบบจำลองรายงานฝนที่สวน '+mm(currentRain));
-  reasons.push('โอกาสฝนสูงสุดในช่วง 2 ชั่วโมง '+pct(maxProbability)+' และฝนสะสมสูงสุดประมาณ '+mm(maxRain));
+  reasons.push('โอกาสฝนถึงจุดกลางสวนในช่วง 2 ชั่วโมง '+pct(arrivalProbability)+' (โอกาสสูงสุดรอบรัศมี 10 กม. '+pct(maxProbability)+')');
+  reasons.push('ลักษณะฝนรอบสวนประมาณ '+rainType+' · อัตราฝนสูงสุด '+mm(maxRainRate)+'/ชม. และฝนสะสมสูงสุดประมาณ '+mm(maxRain));
   reasons.push(areaComplete?(spread<5?'ค่าพยากรณ์ทั้ง 8 ทิศใกล้เคียงกัน':'บริเวณที่มีความเสี่ยงสูงสุดคือ '+direction):'โหลดข้อมูลรอบรัศมี 10 กม. ไม่สำเร็จ จึงใช้ข้อมูลกลางสวนเท่านั้น');
   if(center.wind!==null)reasons.push('ลมบริเวณสวนสูงสุดประมาณ '+kmh(center.wind)+' พัดมาจาก'+compass(center.windDirection)+' และลมกระโชกสูงสุดรอบสวน '+kmh(maxGust));
   if(radar.status==='ok'){
@@ -321,10 +324,10 @@ html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*
    else reasons.push('ฟีดเรดาร์เชิงตัวเลขยังไม่พบกลุ่มฝนภายใน 10 กม.');
   }else reasons.push('ยังไม่มีฟีดเรดาร์เชิงตัวเลขยืนยันฝนในรัศมี 10 กม. โปรดดูภาพเรดาร์ประกอบ');
   const summary=level==='go'?'ข้อมูลล่าสุดยังไม่เข้าเกณฑ์ฝนและลมที่ตั้งไว้ แต่ควรตรวจหน้ายางและท้องฟ้าจริงก่อนเริ่มงาน':level==='wait'?'รอ 15–30 นาที แล้วตรวจใหม่ พร้อมดูภาพเรดาร์และท้องฟ้าจริง':'มีความเสี่ยงฝนหรือลมเข้าเกณฑ์ ควรเลื่อนการกรีดและตรวจใหม่ภายหลัง';
-  return {level,title,badge,summary,maxProbability,maxRain,maxGust,center,direction,reasons};
+  return {level,title,badge,summary,arrivalProbability,maxProbability,maxRain,maxRainRate,rainType,maxGust,center,direction,reasons};
  }
  function paint(report){
-  panel.classList.remove('hidden');panel.dataset.level=report.level;document.getElementById('readinessBadge').textContent=report.badge;document.getElementById('readinessTitle').textContent=report.title;document.getElementById('readinessSummary').textContent=report.summary;document.getElementById('readyProbability').textContent=pct(report.maxProbability);document.getElementById('readyRain').textContent=mm(report.maxRain);document.getElementById('readyDirection').textContent=report.direction;document.getElementById('readyWind').textContent=kmh(report.center.wind)+' / '+kmh(report.maxGust);document.getElementById('readinessReasons').innerHTML=report.reasons.map(x=>'<li>'+esc(x)+'</li>').join('');document.getElementById('readinessNote').textContent='ประเมินจาก Open-Meteo หลายจุดรอบสวนและฟีดเรดาร์เชิงตัวเลข (ถ้ามี) ไม่ใช่การรับรองว่าจะไม่มีฝน และต้องตรวจความแห้งของหน้ายางจริงก่อนกรีด';
+  panel.classList.remove('hidden');panel.dataset.level=report.level;document.getElementById('readinessBadge').textContent=report.badge;document.getElementById('readinessTitle').textContent=report.title;document.getElementById('readinessSummary').textContent=report.summary;document.getElementById('readyArrivalProbability').textContent=pct(report.arrivalProbability);document.getElementById('readyRainType').textContent=report.rainType;document.getElementById('readyRain').textContent=mm(report.maxRain);document.getElementById('readyDirection').textContent=report.direction;document.getElementById('readyWind').textContent=kmh(report.center.wind)+' / '+kmh(report.maxGust);document.getElementById('readinessReasons').innerHTML=report.reasons.map(x=>'<li>'+esc(x)+'</li>').join('');document.getElementById('readinessNote').textContent='โอกาสฝนถึงสวนใช้ค่าพยากรณ์ที่จุดกลางสวน ส่วนการกระจายและความแรงประเมินจาก Open-Meteo 9 จุดรอบรัศมี 10 กม. และฟีดเรดาร์เชิงตัวเลข (ถ้ามี) เป็นค่าประมาณ ไม่ใช่การรับรองว่าจะไม่มีฝน';
  }
  async function runReadiness(){
   if(!app.connected){toast('เชื่อมต่อ Google Sheets ก่อนตรวจความพร้อม');setView('settings');return;}if(!confirmed()){toast('ยืนยันพิกัดสวนก่อนตรวจความพร้อม');setView('settings');return;}
@@ -334,7 +337,7 @@ html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*
    const weather=await api('weather');app.weather=weather;app.health=weather.health;renderWeather();renderHealth();
    const lat=num(app.settings.latitude),lon=num(app.settings.longitude),points=makePoints(lat,lon);let summaries,areaComplete=true;
    try{const area=await fetchArea(points);summaries=area.map((x,i)=>summarize(x,points[i]));}catch(e){areaComplete=false;summaries=weather.forecast?[summarize(weather.forecast,points[0])]:[];}
-   if(!summaries.length)throw new Error('ไม่มีข้อมูลพยากรณ์สำหรับวิเคราะห์');const report=analyse(summaries,areaComplete);paint(report);panel.scrollIntoView({behavior:'smooth',block:'start'});speak(report.title+' '+report.summary+' โอกาสฝนสูงสุด '+pct(report.maxProbability));if(report.level==='stop'&&'vibrate' in navigator)navigator.vibrate([250,120,250]);
+   if(!summaries.length)throw new Error('ไม่มีข้อมูลพยากรณ์สำหรับวิเคราะห์');const report=analyse(summaries,areaComplete);paint(report);panel.scrollIntoView({behavior:'smooth',block:'start'});speak(report.title+' '+report.summary+' โอกาสฝนถึงสวน '+pct(report.arrivalProbability)+' ลักษณะฝน '+report.rainType);if(report.level==='stop'&&'vibrate' in navigator)navigator.vibrate([250,120,250]);
   }catch(e){panel.dataset.level='wait';document.getElementById('readinessBadge').textContent='ตรวจไม่สำเร็จ';document.getElementById('readinessTitle').textContent='ยังสรุปว่าควรกรีดไม่ได้';document.getElementById('readinessSummary').textContent=e.message;toast('ตรวจความพร้อมไม่สำเร็จ · '+e.message);speak('ยังตรวจความพร้อมไม่ได้ค่ะ กรุณาตรวจอินเทอร์เน็ตและลองใหม่');}finally{buttons.forEach(b=>b.disabled=false);}
  }
  window.runGardenReadiness=runReadiness;
