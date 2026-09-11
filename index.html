@@ -340,6 +340,17 @@ async function loadRadar(){
    recognition.onend=()=>{clearTimeout(quietTimer);clearTimeout(hardTimer);mic.classList.remove('listening');mic.title='เริ่มสั่งงานด้วยเสียง';recognition=null;if(heard){if(noteOnly)$('noteInput').value=($('noteInput').value+' '+heard).trim();else voiceCommand(heard);}else if(!failed)toast('ยังไม่ได้ยินคำพูด กดไมค์ใหม่หรือใช้ปุ่ม “ตรวจอากาศก่อนกรีด”');};
    try{recognition.start();hardTimer=setTimeout(()=>{try{recognition&&recognition.stop();}catch{}},10000);}catch{recognition=null;mic.classList.remove('listening');toast('เปิดไมโครโฟนไม่ได้ กด “ตรวจอากาศก่อนกรีด” แทนได้เลย');}
   };
+  const lineHelp=[...document.querySelectorAll('#view-settings p.muted')].find(p=>p.textContent.includes('LINE_CHANNEL_ACCESS_TOKEN'));
+  if(lineHelp)lineHelp.textContent='LINE OA: ใส่เฉพาะ LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties ระบบจะส่งแบบ Broadcast ถึงเพื่อนทุกคน ไม่ต้องใช้ LINE_USER_ID';
+  const testButton=document.getElementById('testServer');
+  if(testButton){
+   testButton.textContent='ทดสอบส่งถึงเพื่อนทุกคน';
+   testButton.title='ส่งข้อความทดสอบแบบ Broadcast ถึงเพื่อนทุกคนของ LINE OA';
+   const actions=testButton.closest('.form-actions');
+   if(actions&&!document.getElementById('lineBroadcastWarning')){
+    const warning=document.createElement('p');warning.id='lineBroadcastWarning';warning.className='warning';warning.style.marginTop='16px';warning.textContent='คำเตือน: ปุ่มทดสอบและการแจ้งเตือนจริงจะส่ง LINE OA ถึงเพื่อนทุกคน และนับตามโควตาข้อความของบัญชี';actions.insertAdjacentElement('beforebegin',warning);
+   }
+  }
   const priorVoiceCommand=voiceCommand;voiceCommand=function(text){const t=String(text||'');if((t.includes('พร้อม')&&t.includes('ลงสวน'))||t.includes('ควรกรีด')||t.includes('กรีดได้ไหม')||t.includes('ตรวจความพร้อม')){runReadiness();return;}priorVoiceCommand(t);};
 })();
 </script></body></html>
