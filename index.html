@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="th">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#153f32"><meta name="referrer" content="no-referrer">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#153f32"><meta name="referrer" content="no-referrer">
 <title>เลขาสวนยาง — ดูฝนก่อนลงสวน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -255,7 +255,18 @@ async function loadRadar(){
 .readiness-reasons{margin:10px 0 0;padding-left:24px}.readiness-reasons li{margin:6px 0}
 .readiness-note{margin-top:15px;color:var(--muted);font-size:13px}
 .voice-actions{display:flex;align-items:center;gap:10px;flex:none}.weather-check-button{background:var(--forest);border-color:var(--forest);color:#fff;white-space:nowrap}
-@media(max-width:760px){.readiness-grid{grid-template-columns:1fr 1fr}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}.voice-card{align-items:stretch;flex-direction:column}.voice-actions{width:100%}.weather-check-button{flex:1}.voice-actions .mic-round{width:58px}}
+html,body{max-width:100%;overflow-x:hidden}.workspace,.workspace>*,.view,.view>*,.card,.hero,.prep,.metric,.side-stack,.forms,.main-grid,.hero-grid{min-width:0;max-width:100%}.card-head>div,.topbar>div:first-child,.hero-top>*,.hero-bottom>*{min-width:0}.hero h2,.hero p,.card h2,.muted,.warning,.health-list b{overflow-wrap:anywhere}
+@media(max-width:760px){
+ .readiness-grid{grid-template-columns:1fr 1fr}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}.voice-card{align-items:stretch;flex-direction:column}.voice-actions{width:100%}.weather-check-button{flex:1;min-width:0;white-space:normal}.voice-actions .mic-round{width:58px}
+ .rail{width:100%;max-width:100vw;height:calc(70px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));overflow:hidden}
+ .nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;width:100%;height:100%}
+ .nav button{width:100%;min-width:0;padding:6px 1px;font-size:10px;line-height:1.15;gap:2px;text-align:center;justify-content:center;overflow-wrap:anywhere}
+ .workspace{width:100%;max-width:100vw;padding:16px 12px calc(92px + env(safe-area-inset-bottom))}
+ .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.top-actions{min-width:0;max-width:142px}.status-pill{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.top-actions .btn{flex:none}
+ .intro-line,.hero-bottom,.prep .row,.card-head{flex-wrap:wrap}.hero,.prep,.metric,.card-pad,.readiness-panel{width:100%;padding-left:18px;padding-right:18px}.hero-bottom .btn{max-width:100%;white-space:normal}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric{padding:15px 13px}.metric .value{font-size:clamp(23px,8vw,28px)}
+ .quick-buttons{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.quick-buttons button{min-width:0;overflow-wrap:anywhere}.map-wrap{max-width:calc(100% - 16px);margin-left:8px;margin-right:8px}.timeline-control{padding-left:14px;padding-right:14px}.timeline-control .btn{flex:none}
+}
+@media(max-width:370px){.workspace{padding-left:10px;padding-right:10px}.nav button{font-size:9px}.nav .icon{width:19px;height:19px}.metrics{gap:8px}.metric{padding:13px 10px}.readiness-stat{padding:11px 9px}.readiness-stat b{font-size:16px}}
 </style>
 <script>
 (function(){
