@@ -254,7 +254,8 @@ async function loadRadar(){
 .readiness-stat small{display:block;color:var(--muted);font-size:12px}.readiness-stat b{font-size:18px}
 .readiness-reasons{margin:10px 0 0;padding-left:24px}.readiness-reasons li{margin:6px 0}
 .readiness-note{margin-top:15px;color:var(--muted);font-size:13px}
-@media(max-width:760px){.readiness-grid{grid-template-columns:1fr 1fr}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}}
+.voice-actions{display:flex;align-items:center;gap:10px;flex:none}.weather-check-button{background:var(--forest);border-color:var(--forest);color:#fff;white-space:nowrap}
+@media(max-width:760px){.readiness-grid{grid-template-columns:1fr 1fr}.readiness-head{display:block}.readiness-head .btn{margin-top:12px;width:100%}.voice-card{align-items:stretch;flex-direction:column}.voice-actions{width:100%}.weather-check-button{flex:1}.voice-actions .mic-round{width:58px}}
 </style>
 <script>
 (function(){
@@ -317,7 +318,7 @@ async function loadRadar(){
  async function runReadiness(){
   if(!app.connected){toast('เชื่อมต่อ Google Sheets ก่อนตรวจความพร้อม');setView('settings');return;}if(!confirmed()){toast('ยืนยันพิกัดสวนก่อนตรวจความพร้อม');setView('settings');return;}
   setView('dashboard');panel.classList.remove('hidden');panel.dataset.level='wait';document.getElementById('readinessBadge').textContent='กำลังตรวจข้อมูลล่าสุด…';document.getElementById('readinessTitle').textContent='กำลังวิเคราะห์รอบสวน 10 กม.';document.getElementById('readinessSummary').textContent='กำลังเปรียบเทียบกลางสวนและ 8 ทิศในช่วง 2 ชั่วโมงข้างหน้า';
-  const buttons=[document.getElementById('railVoice'),document.getElementById('readinessRefresh')].filter(Boolean);buttons.forEach(b=>b.disabled=true);
+  const buttons=[document.getElementById('railVoice'),document.getElementById('readinessRefresh'),document.getElementById('weatherCheckButton')].filter(Boolean);buttons.forEach(b=>b.disabled=true);
   try{
    const weather=await api('weather');app.weather=weather;app.health=weather.health;renderWeather();renderHealth();
    const lat=num(app.settings.latitude),lon=num(app.settings.longitude),points=makePoints(lat,lon);let summaries,areaComplete=true;
@@ -327,7 +328,18 @@ async function loadRadar(){
  }
  window.runGardenReadiness=runReadiness;
   const rail=document.getElementById('railVoice');rail.textContent='ตรวจความพร้อม';rail.title='วิเคราะห์ว่าควรกรีดยางหรือไม่ใน 2 ชั่วโมงข้างหน้า';rail.onclick=runReadiness;document.querySelector('.rail-foot p').textContent='ตรวจฝน 8 ทิศรอบสวน 10 กม. และแนวโน้ม 2 ชั่วโมงก่อนกรีด';
-  const voiceHint=document.querySelector('.voice-card p');if(voiceHint)voiceHint.textContent='พูดว่า “พร้อมก่อนลงสวน” หรือ “ควรกรีดไหม”';document.getElementById('readinessRefresh').onclick=runReadiness;
+  const voiceCard=document.querySelector('.voice-card'),voiceHint=voiceCard&&voiceCard.querySelector('p');if(voiceHint)voiceHint.textContent='ใช้ไมโครโฟน หรือกดปุ่มตรวจอากาศได้ทันที';
+  if(voiceCard){const mic=document.getElementById('voiceButton'),actions=document.createElement('div'),check=document.createElement('button');actions.className='voice-actions';check.type='button';check.className='btn weather-check-button';check.id='weatherCheckButton';check.textContent='ตรวจอากาศก่อนกรีด';check.setAttribute('aria-label','ตรวจอากาศรอบสวน 10 กิโลเมตรก่อนกรีดยาง');check.onclick=runReadiness;voiceCard.insertBefore(actions,mic);actions.append(check,mic);}
+  document.getElementById('readinessRefresh').onclick=runReadiness;
+  listen=function(noteOnly=false){
+   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('ไมโครโฟนไม่รองรับ กด “ตรวจอากาศก่อนกรีด” ได้เลย');return;}if(recognition){recognition.stop();return;}
+   recognition=new SR();recognition.lang='th-TH';recognition.interimResults=true;recognition.continuous=true;let heard='',failed=false,quietTimer=null,hardTimer=null;
+   const mic=document.getElementById('voiceButton');mic.classList.add('listening');mic.title='กำลังฟัง สูงสุดประมาณ 10 วินาที';toast('กำลังฟัง… เริ่มพูดได้เลย ระบบรอประมาณ 10 วินาที');
+   recognition.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const words=e.results[i][0].transcript.trim();if(e.results[i].isFinal)heard=(heard+' '+words).trim();else interim=words;}$('voiceTranscript').textContent='ได้ยินว่า “'+(heard||interim)+'”';if(heard){clearTimeout(quietTimer);quietTimer=setTimeout(()=>{try{recognition&&recognition.stop();}catch{}},1200);}};
+   recognition.onerror=e=>{failed=true;toast('ไมโครโฟนหยุดทำงาน ('+e.error+') กด “ตรวจอากาศก่อนกรีด” แทนได้เลย');};
+   recognition.onend=()=>{clearTimeout(quietTimer);clearTimeout(hardTimer);mic.classList.remove('listening');mic.title='เริ่มสั่งงานด้วยเสียง';recognition=null;if(heard){if(noteOnly)$('noteInput').value=($('noteInput').value+' '+heard).trim();else voiceCommand(heard);}else if(!failed)toast('ยังไม่ได้ยินคำพูด กดไมค์ใหม่หรือใช้ปุ่ม “ตรวจอากาศก่อนกรีด”');};
+   try{recognition.start();hardTimer=setTimeout(()=>{try{recognition&&recognition.stop();}catch{}},10000);}catch{recognition=null;mic.classList.remove('listening');toast('เปิดไมโครโฟนไม่ได้ กด “ตรวจอากาศก่อนกรีด” แทนได้เลย');}
+  };
   const priorVoiceCommand=voiceCommand;voiceCommand=function(text){const t=String(text||'');if((t.includes('พร้อม')&&t.includes('ลงสวน'))||t.includes('ควรกรีด')||t.includes('กรีดได้ไหม')||t.includes('ตรวจความพร้อม')){runReadiness();return;}priorVoiceCommand(t);};
 })();
 </script></body></html>
